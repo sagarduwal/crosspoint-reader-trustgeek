@@ -22,6 +22,9 @@
 
 int HomeActivity::getMenuItemCount() const {
   int count = 4;  // File Browser, Recents, File transfer, Settings
+#ifdef CROSSPOINT_APP_STORE
+  count++;  // Applications
+#endif
   if (!recentBooks.empty()) {
     count += recentBooks.size();
   }
@@ -197,6 +200,11 @@ void HomeActivity::loop() {
         case HomeMenuItem::FILE_TRANSFER:
           onFileTransferOpen();
           break;
+#ifdef CROSSPOINT_APP_STORE
+        case HomeMenuItem::APPLICATIONS:
+          onApplicationsOpen();
+          break;
+#endif
         case HomeMenuItem::SETTINGS_MENU:
           onSettingsOpen();
           break;
@@ -232,8 +240,15 @@ void HomeActivity::render(RenderLock&&) {
 
   // Build menu items dynamically
   std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), tr(STR_MENU_RECENT_BOOKS), tr(STR_FILE_TRANSFER),
+#ifdef CROSSPOINT_APP_STORE
+                                        tr(STR_APPLICATIONS),
+#endif
                                         tr(STR_SETTINGS_TITLE)};
-  std::vector<UIIcon> menuIcons = {Folder, Recent, Transfer, Settings};
+  std::vector<UIIcon> menuIcons = {Folder, Recent, Transfer,
+#ifdef CROSSPOINT_APP_STORE
+                                     Library,
+#endif
+                                     Settings};
 
   if (hasOpdsServers) {
     menuItems.insert(menuItems.begin() + 2, tr(STR_OPDS_BROWSER));
@@ -281,3 +296,7 @@ void HomeActivity::onSettingsOpen() { activityManager.goToSettings(); }
 void HomeActivity::onFileTransferOpen() { activityManager.goToFileTransfer(); }
 
 void HomeActivity::onOpdsBrowserOpen() { activityManager.goToBrowser(); }
+
+#ifdef CROSSPOINT_APP_STORE
+void HomeActivity::onApplicationsOpen() { activityManager.goToApplications(); }
+#endif

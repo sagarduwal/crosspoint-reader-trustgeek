@@ -1,0 +1,47 @@
+{
+  "name": "LuaRuntime",
+  "version": "1.0.0",
+  "build": {
+    "flags": [
+      "-Os",
+      "-DLUA_USE_LONGJMP=1",
+      "-DLUA_32BITS=1"
+    ],
+    "includeDir": "vendor/lua-5.4.7/src",
+    "srcFilter": [
+      "+<*.cpp>",
+      "+<vendor/lua-5.4.7/src/lapi.c>",
+      "+<vendor/lua-5.4.7/src/lauxlib.c>",
+      "+<vendor/lua-5.4.7/src/lbaselib.c>",
+      "+<vendor/lua-5.4.7/src/lcode.c>",
+      "+<vendor/lua-5.4.7/src/lcorolib.c>",
+      "+<vendor/lua-5.4.7/src/lctype.c>",
+      "+<vendor/lua-5.4.7/src/ldebug.c>",
+      "+<vendor/lua-5.4.7/src/ldo.c>",
+      "+<vendor/lua-5.4.7/src/ldump.c>",
+      "+<vendor/lua-5.4.7/src/lfunc.c>",
+      "+<vendor/lua-5.4.7/src/lgc.c>",
+      "+<vendor/lua-5.4.7/src/llex.c>",
+      "+<vendor/lua-5.4.7/src/lmathlib.c>",
+      "+<vendor/lua-5.4.7/src/lmem.c>",
+      "+<vendor/lua-5.4.7/src/lobject.c>",
+      "+<vendor/lua-5.4.7/src/lopcodes.c>",
+      "+<vendor/lua-5.4.7/src/lparser.c>",
+      "+<vendor/lua-5.4.7/src/lstate.c>",
+      "+<vendor/lua-5.4.7/src/lstring.c>",
+      "+<vendor/lua-5.4.7/src/lstrlib.c>",
+      "+<vendor/lua-5.4.7/src/ltable.c>",
+      "+<vendor/lua-5.4.7/src/ltablib.c>",
+      "+<vendor/lua-5.4.7/src/ltm.c>",
+      "+<vendor/lua-5.4.7/src/lundump.c>",
+      "+<vendor/lua-5.4.7/src/lvm.c>",
+      "+<vendor/lua-5.4.7/src/lzio.c>",
+      "-<vendor/lua-5.4.7/src/lua.c>",
+      "-<vendor/lua-5.4.7/src/luac.c>",
+      "-<vendor/lua-5.4.7/src/liolib.c>",
+      "-<vendor/lua-5.4.7/src/loslib.c>",
+      "-<vendor/lua-5.4.7/src/loadlib.c>",
+      "-<vendor/lua-5.4.7/src/linit.c>"
+    ]
+  }
+}

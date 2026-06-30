@@ -17,6 +17,9 @@
 #include "reader/ReaderActivity.h"
 #include "settings/OpdsServerListActivity.h"
 #include "settings/SettingsActivity.h"
+#ifdef CROSSPOINT_APP_STORE
+#include "apps/ApplicationsMenuActivity.h"
+#endif
 #include "util/FullScreenMessageActivity.h"
 
 void ActivityManager::begin() {
@@ -193,6 +196,12 @@ void ActivityManager::goToBrowser() {
   }
 }
 
+#ifdef CROSSPOINT_APP_STORE
+void ActivityManager::goToApplications() {
+  replaceActivity(std::make_unique<ApplicationsMenuActivity>(renderer, mappedInput));
+}
+#endif
+
 void ActivityManager::goToReader(std::string path) {
   replaceActivity(std::make_unique<ReaderActivity>(renderer, mappedInput, std::move(path)));
 }
@@ -219,6 +228,10 @@ void ActivityManager::goHome(HomeMenuItem initialMenuItem) {
       initialMenuItem = HomeMenuItem::OPDS_BROWSER;
     } else if (activityName == "CrossPointWebServer") {
       initialMenuItem = HomeMenuItem::FILE_TRANSFER;
+#ifdef CROSSPOINT_APP_STORE
+    } else if (activityName == "Applications" || activityName == "DiscoverApps") {
+      initialMenuItem = HomeMenuItem::APPLICATIONS;
+#endif
     } else if (activityName == "Settings") {
       initialMenuItem = HomeMenuItem::SETTINGS_MENU;
     }

@@ -18,6 +18,10 @@
 
 #include <cstring>
 
+#ifdef CROSSPOINT_APP_STORE
+#include <AppBootstrap.h>
+#endif
+
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "KOReaderCredentialStore.h"
@@ -350,6 +354,9 @@ void setup() {
   I18N.setLanguage(static_cast<Language>(SETTINGS.language));
   KOREADER_STORE.loadFromFile();
   OPDS_STORE.loadFromFile();
+#ifdef CROSSPOINT_APP_STORE
+  AppBootstrap::onBoot();
+#endif
   UITheme::getInstance().reload();
   ButtonNavigator::setMappedInputManager(mappedInputManager);
 
