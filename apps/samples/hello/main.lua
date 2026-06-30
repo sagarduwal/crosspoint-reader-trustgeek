@@ -1,4 +1,5 @@
 -- Hello sample: draws ASCII art and device info via cp.display (Host API v1 subset).
+-- Y coordinates are relative to the content area below the activity header.
 
 cp.display.clear()
 
@@ -12,7 +13,7 @@ local art = {
   "   \\___)=(___/   ",
 }
 
-local y = 58
+local y = 0
 for _, line in ipairs(art) do
   cp.display.center(y, line)
   y = y + 14

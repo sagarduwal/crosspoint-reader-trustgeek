@@ -33,7 +33,22 @@ void AppRunnerActivity::onEnter() {
   char mainLuaPath[96];
   snprintf(mainLuaPath, sizeof(mainLuaPath), "%s/%s/main.lua", AppStorePaths::kAppsRoot, appId_.c_str());
 
-  const AppRunResult runResult = AppRunner::runMainLua(mainLuaPath);
+  AppRunContext runContext;
+  runContext.renderer = &renderer;
+  runContext.mappedInput = &mappedInput;
+  runContext.appId = appId_;
+  runContext.displayName = displayName_;
+  runContext.fontId = UI_10_FONT_ID;
+
+  const auto& metrics = UITheme::getInstance().getMetrics();
+  const int pageHeight = renderer.getScreenHeight();
+  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  const int footerReserve =
+      metrics.buttonHintsHeight + metrics.verticalSpacing + renderer.getLineHeight(UI_10_FONT_ID);
+  runContext.contentTop = contentTop;
+  runContext.contentHeight = pageHeight - contentTop - footerReserve;
+
+  const AppRunResult runResult = AppRunner::runMainLua(mainLuaPath, runContext);
   if (!runResult.success) {
     const std::string message = runResult.errorMessage.empty() ? std::string(tr(STR_APP_RUN_FAILED))
                                                                : runResult.errorMessage;
@@ -81,11 +96,15 @@ void AppRunnerActivity::render(RenderLock&&) {
     if (draws.empty()) {
       renderer.drawCenteredText(UI_12_FONT_ID, pageHeight / 2, tr(STR_APP_PRESS_BACK_TO_EXIT));
     } else {
+      // #region agent log
+      LOG_DBG("APPS", "AppRunner contentTop=%d entries=%u", contentTop, static_cast<unsigned>(draws.size()));
+      // #endregion
       for (const LuaAppDisplayEntry& entry : draws) {
+        const int drawY = contentTop + entry.y;
         if (entry.centered) {
-          renderer.drawCenteredText(UI_10_FONT_ID, entry.y, entry.text.c_str());
+          renderer.drawCenteredText(UI_10_FONT_ID, drawY, entry.text.c_str());
         } else {
-          renderer.drawText(UI_10_FONT_ID, entry.x, entry.y, entry.text.c_str());
+          renderer.drawText(UI_10_FONT_ID, entry.x, drawY, entry.text.c_str());
         }
       }
       renderer.drawCenteredText(UI_10_FONT_ID, footerY, tr(STR_APP_PRESS_BACK_TO_EXIT));

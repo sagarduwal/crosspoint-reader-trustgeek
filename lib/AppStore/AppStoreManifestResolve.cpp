@@ -1,5 +1,7 @@
 #include "AppStoreManifestResolve.h"
 
+#include <Logging.h>
+
 #include "AppStoreManifestJson.h"
 
 bool appStoreManifestResolveAndParse(const AppCatalogResolveInput& input, std::vector<AppCatalogEntry>& outEntries,
@@ -13,6 +15,9 @@ bool appStoreManifestResolveAndParse(const AppCatalogResolveInput& input, std::v
       outSource = AppCatalogSource::Remote;
       return true;
     }
+    // #region agent log
+    LOG_DBG("APPS", "[H4] remote JSON parse failed");
+    // #endregion
   }
 
   if (input.cacheReadOk && input.cacheJson != nullptr && input.cacheJson[0] != '\0') {
@@ -20,6 +25,9 @@ bool appStoreManifestResolveAndParse(const AppCatalogResolveInput& input, std::v
       outSource = AppCatalogSource::Cache;
       return true;
     }
+    // #region agent log
+    LOG_DBG("APPS", "[H5] cache JSON parse failed");
+    // #endregion
   }
 
   if (input.builtinJson != nullptr && input.builtinJson[0] != '\0') {

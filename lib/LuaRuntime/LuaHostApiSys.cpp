@@ -22,12 +22,10 @@ int sysLog(lua_State* L) {
 }
 
 int sysExit(lua_State* L) {
-  const int code = lua_gettop(L) >= 1 ? static_cast<int>(luaL_checkinteger(L, 1)) : 0;
   if (LuaEngine* engine = currentEngine()) {
     engine->requestExit();
   }
-  lua_pushinteger(L, code);
-  return 1;
+  return luaL_error(L, "exit");
 }
 
 int sysVersion(lua_State* L) {

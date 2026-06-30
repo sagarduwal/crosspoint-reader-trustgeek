@@ -270,6 +270,9 @@ bool ZipFile::loadZipDetails() {
 }
 
 bool ZipFile::open() {
+  // #region agent log
+  LOG_DBG("ZIP", "open path=%s len=%u", filePath.c_str(), static_cast<unsigned>(filePath.size()));
+  // #endregion
   if (!Storage.openFileForRead("ZIP", filePath, file)) {
     return false;
   }

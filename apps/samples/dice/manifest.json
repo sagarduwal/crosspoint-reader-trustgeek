@@ -1,0 +1,7 @@
+{
+  "id": "dice",
+  "name": "Dice Roller",
+  "version": "1.0.0",
+  "entry": "main.lua",
+  "min_api_version": "1.0"
+}

@@ -3,6 +3,9 @@
 #include "LuaAllocator.h"
 #include "LuaAppDisplay.h"
 #include "LuaHostApiDisplay.h"
+#include "LuaHostApiFs.h"
+#include "LuaHostApiInput.h"
+#include "LuaHostApiSettings.h"
 #include "LuaHostApiSys.h"
 
 #include <HalStorage.h>
@@ -84,6 +87,9 @@ void LuaEngine::registerHostApi() {
   lua_newtable(state_);
   registerCpSysApi(state_, this);
   registerCpDisplayApi(state_);
+  registerCpInputApi(state_);
+  registerCpFsApi(state_);
+  registerCpSettingsApi(state_);
   lua_setglobal(state_, "cp");
 }
 
@@ -111,6 +117,9 @@ bool LuaEngine::loadAndRunFile(const char* path, std::string& errorOut) {
 
   const int callStatus = lua_pcall(state_, 0, 0, 0);
   if (callStatus != LUA_OK) {
+    if (exitRequested_) {
+      return true;
+    }
     return pushLuaError(state_, errorOut);
   }
   return true;
@@ -129,6 +138,9 @@ bool LuaEngine::loadStringAndRun(const char* chunkName, const char* source, std:
 
   const int callStatus = lua_pcall(state_, 0, 0, 0);
   if (callStatus != LUA_OK) {
+    if (exitRequested_) {
+      return true;
+    }
     return pushLuaError(state_, errorOut);
   }
   return true;

@@ -2,7 +2,7 @@
 
 namespace AppStoreManifestData {
 
-constexpr char kRemoteUrl[] = "https://apps.crosspointreader.com/v1/manifest.json";
+constexpr char kRemoteUrl[] = "https://crosspoint-app-api.vercel.app/v1/manifest.json";
 
 // Flash-resident catalog used when remote fetch and SD cache are unavailable.
 constexpr char kBuiltinJson[] = R"({

@@ -1,0 +1,7 @@
+{
+  "id": "screen-clean",
+  "name": "Screen Clean",
+  "version": "1.0.0",
+  "entry": "main.lua",
+  "min_api_version": "1.0"
+}
