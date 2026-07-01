@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "cards": [
+    {
+      "id": "stars",
+      "file": "assets/cards/01-stars.bmp"
+    },
+    {
+      "id": "apple",
+      "file": "assets/cards/02-apple.bmp"
+    },
+    {
+      "id": "geometric-star",
+      "file": "assets/cards/03-geometric-star.bmp"
+    },
+    {
+      "id": "snail",
+      "file": "assets/cards/04-snail.bmp"
+    },
+    {
+      "id": "spirals",
+      "file": "assets/cards/05-spirals.bmp"
+    },
+    {
+      "id": "citrus",
+      "file": "assets/cards/06-citrus.bmp"
+    },
+    {
+      "id": "panda",
+      "file": "assets/cards/07-panda.bmp"
+    },
+    {
+      "id": "checkerboard",
+      "file": "assets/cards/08-checkerboard.bmp"
+    },
+    {
+      "id": "zigzags",
+      "file": "assets/cards/09-zigzags.bmp"
+    },
+    {
+      "id": "heart",
+      "file": "assets/cards/10-heart.bmp"
+    },
+    {
+      "id": "carrot",
+      "file": "assets/cards/11-carrot.bmp"
+    },
+    {
+      "id": "triangles",
+      "file": "assets/cards/12-triangles.bmp"
+    },
+    {
+      "id": "large-triangle",
+      "file": "assets/cards/13-large-triangle.bmp"
+    },
+    {
+      "id": "bullseye",
+      "file": "assets/cards/14-bullseye.bmp"
+    },
+    {
+      "id": "moon-stars",
+      "file": "assets/cards/15-moon-stars.bmp"
+    },
+    {
+      "id": "cat",
+      "file": "assets/cards/16-cat.bmp"
+    },
+    {
+      "id": "waves",
+      "file": "assets/cards/17-waves.bmp"
+    },
+    {
+      "id": "eye",
+      "file": "assets/cards/18-eye.bmp"
+    },
+    {
+      "id": "flower",
+      "file": "assets/cards/19-flower.bmp"
+    },
+    {
+      "id": "fish",
+      "file": "assets/cards/20-fish.bmp"
+    }
+  ]
+}

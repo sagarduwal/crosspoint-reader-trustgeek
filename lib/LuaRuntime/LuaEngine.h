@@ -31,6 +31,7 @@ class LuaEngine {
  private:
   void openSandboxedLibraries();
   void registerHostApi();
+  void registerRequireLoader();
 
   lua_State* state_ = nullptr;
   class LuaAllocator* allocator_ = nullptr;

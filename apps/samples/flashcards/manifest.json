@@ -1,0 +1,7 @@
+{
+  "id": "flashcards",
+  "name": "Flashcards",
+  "version": "1.0.0",
+  "entry": "main.lua",
+  "min_api_version": "1.0"
+}

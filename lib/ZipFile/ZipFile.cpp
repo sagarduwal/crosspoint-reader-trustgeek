@@ -270,9 +270,6 @@ bool ZipFile::loadZipDetails() {
 }
 
 bool ZipFile::open() {
-  // #region agent log
-  LOG_DBG("ZIP", "open path=%s len=%u", filePath.c_str(), static_cast<unsigned>(filePath.size()));
-  // #endregion
   if (!Storage.openFileForRead("ZIP", filePath, file)) {
     return false;
   }
@@ -413,7 +410,8 @@ uint8_t* ZipFile::readFileToMemory(const char* filename, size_t* size, const boo
     ctx.readBuf = fileReadBuffer;
     ctx.readBufSize = 1024;
 
-    if (!ctx.reader.init(true)) {
+    // One-shot decompress into pre-allocated buffer; no 32KB sliding window needed.
+    if (!ctx.reader.init(false)) {
       LOG_ERR("ZIP", "Failed to init inflate reader");
       free(fileReadBuffer);
       free(data);

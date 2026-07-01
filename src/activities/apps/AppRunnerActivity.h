@@ -5,10 +5,11 @@
 #include "activities/Activity.h"
 
 class AppRunnerActivity final : public Activity {
-  enum class State { Loading, Idle };
+  enum class State { Loading, Idle, Error };
 
   std::string appId_;
   std::string displayName_;
+  std::string errorMessage_;
   State state_ = State::Loading;
 
  public:

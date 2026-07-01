@@ -8,10 +8,13 @@
 #include "LuaHostApiSettings.h"
 #include "LuaHostApiSys.h"
 
+#include "LuaHostApiContext.h"
+
 #include <HalStorage.h>
 #include <Logging.h>
 
 #include <cstring>
+#include <cstdio>
 
 extern "C" {
 #include "lauxlib.h"
@@ -26,6 +29,59 @@ bool pushLuaError(lua_State* L, std::string& errorOut) {
   errorOut = message != nullptr ? message : "unknown Lua error";
   lua_pop(L, 1);
   return false;
+}
+
+int bundleRequireLoader(lua_State* L) {
+  const char* modname = luaL_checkstring(L, 1);
+  if (modname[0] == '\0') {
+    return luaL_error(L, "invalid module name");
+  }
+  if (strstr(modname, "..") != nullptr || strchr(modname, '/') != nullptr || strchr(modname, '\\') != nullptr) {
+    return luaL_error(L, "invalid module path");
+  }
+
+  lua_getfield(L, LUA_REGISTRYINDEX, "_CP_LOADED");
+  lua_getfield(L, -1, modname);
+  if (!lua_isnil(L, -1)) {
+    lua_remove(L, -2);
+    return 1;
+  }
+  lua_pop(L, 1);
+
+  LuaHostApiContext* context = getActiveHostApiContext();
+  if (context == nullptr || context->appId.empty()) {
+    return luaL_error(L, "require unavailable");
+  }
+
+  char libPath[128];
+  const int written = snprintf(libPath, sizeof(libPath), "/.crosspoint/apps/%s/lib/%s.lua", context->appId.c_str(),
+                                 modname);
+  if (written <= 0 || static_cast<size_t>(written) >= sizeof(libPath)) {
+    return luaL_error(L, "module path too long");
+  }
+  if (!Storage.exists(libPath)) {
+    return luaL_error(L, "module not found: %s", modname);
+  }
+
+  const String source = Storage.readFile(libPath);
+  if (source.isEmpty()) {
+    return luaL_error(L, "cannot read module: %s", modname);
+  }
+
+  const int loadStatus = luaL_loadbuffer(L, source.c_str(), source.length(), libPath);
+  if (loadStatus != LUA_OK) {
+    return lua_error(L);
+  }
+
+  if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
+    return lua_error(L);
+  }
+
+  lua_getfield(L, LUA_REGISTRYINDEX, "_CP_LOADED");
+  lua_pushvalue(L, -2);
+  lua_setfield(L, -2, modname);
+  lua_pop(L, 1);
+  return 1;
 }
 
 }  // namespace
@@ -54,6 +110,7 @@ bool LuaEngine::init(size_t heapCapBytes) {
 
   openSandboxedLibraries();
   registerHostApi();
+  registerRequireLoader();
   return true;
 }
 
@@ -91,6 +148,14 @@ void LuaEngine::registerHostApi() {
   registerCpFsApi(state_);
   registerCpSettingsApi(state_);
   lua_setglobal(state_, "cp");
+}
+
+void LuaEngine::registerRequireLoader() {
+  lua_newtable(state_);
+  lua_setfield(state_, LUA_REGISTRYINDEX, "_CP_LOADED");
+
+  lua_pushcfunction(state_, bundleRequireLoader);
+  lua_setglobal(state_, "require");
 }
 
 bool LuaEngine::loadAndRunFile(const char* path, std::string& errorOut) {

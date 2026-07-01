@@ -20,3 +20,4 @@ void setActiveHostApiContext(LuaHostApiContext* context);
 LuaHostApiContext* getActiveHostApiContext();
 
 bool buildAppDataPath(const std::string& appId, const std::string& relativePath, std::string& absoluteOut);
+bool buildAppBundlePath(const std::string& appId, const std::string& relativePath, std::string& absoluteOut);

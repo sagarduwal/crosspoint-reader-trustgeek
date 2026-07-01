@@ -10,7 +10,6 @@
 
 #include <cstdio>
 
-#include "activities/util/FullScreenMessageActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -25,8 +24,9 @@ void AppRunnerActivity::onEnter() {
   requestUpdateAndWait();
 
   if (!AppPathSanitizer::isValidAppId(appId_)) {
-    activityManager.replaceActivity(std::make_unique<FullScreenMessageActivity>(
-        renderer, mappedInput, std::string(tr(STR_APP_RUN_FAILED)), EpdFontFamily::REGULAR));
+    errorMessage_ = tr(STR_APP_RUN_FAILED);
+    state_ = State::Error;
+    requestUpdate();
     return;
   }
 
@@ -50,11 +50,10 @@ void AppRunnerActivity::onEnter() {
 
   const AppRunResult runResult = AppRunner::runMainLua(mainLuaPath, runContext);
   if (!runResult.success) {
-    const std::string message = runResult.errorMessage.empty() ? std::string(tr(STR_APP_RUN_FAILED))
-                                                               : runResult.errorMessage;
-    LOG_ERR("APPS", "App %s failed: %s", appId_.c_str(), message.c_str());
-    activityManager.replaceActivity(
-        std::make_unique<FullScreenMessageActivity>(renderer, mappedInput, message, EpdFontFamily::REGULAR));
+    errorMessage_ = runResult.errorMessage.empty() ? std::string(tr(STR_APP_RUN_FAILED)) : runResult.errorMessage;
+    state_ = State::Error;
+    LOG_ERR("APPS", "App %s failed: %s", appId_.c_str(), errorMessage_.c_str());
+    requestUpdate();
     return;
   }
 
@@ -68,7 +67,7 @@ void AppRunnerActivity::onEnter() {
 }
 
 void AppRunnerActivity::loop() {
-  if (state_ != State::Idle) {
+  if (state_ != State::Idle && state_ != State::Error) {
     return;
   }
 
@@ -91,22 +90,27 @@ void AppRunnerActivity::render(RenderLock&&) {
 
   if (state_ == State::Loading) {
     renderer.drawCenteredText(UI_12_FONT_ID, pageHeight / 2, tr(STR_LOADING));
+  } else if (state_ == State::Error) {
+    const int contentWidth = pageWidth - 2 * metrics.contentSidePadding;
+    const int lineHeight = renderer.getLineHeight(UI_10_FONT_ID);
+    const auto lines = renderer.wrappedText(UI_10_FONT_ID, errorMessage_.c_str(), contentWidth, 8);
+    int y = contentTop;
+    if (lines.empty()) {
+      renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2, errorMessage_.c_str());
+    } else {
+      for (const auto& line : lines) {
+        renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, y, line.c_str());
+        y += lineHeight;
+      }
+    }
+    renderer.drawCenteredText(UI_10_FONT_ID, footerY, tr(STR_APP_PRESS_BACK_TO_EXIT));
   } else {
     const auto& draws = LuaAppDisplay::entries();
-    if (draws.empty()) {
+    const auto& bitmaps = LuaAppDisplay::bitmapEntries();
+    if (draws.empty() && bitmaps.empty()) {
       renderer.drawCenteredText(UI_12_FONT_ID, pageHeight / 2, tr(STR_APP_PRESS_BACK_TO_EXIT));
     } else {
-      // #region agent log
-      LOG_DBG("APPS", "AppRunner contentTop=%d entries=%u", contentTop, static_cast<unsigned>(draws.size()));
-      // #endregion
-      for (const LuaAppDisplayEntry& entry : draws) {
-        const int drawY = contentTop + entry.y;
-        if (entry.centered) {
-          renderer.drawCenteredText(UI_10_FONT_ID, drawY, entry.text.c_str());
-        } else {
-          renderer.drawText(UI_10_FONT_ID, entry.x, drawY, entry.text.c_str());
-        }
-      }
+      LuaAppDisplay::paint(renderer, UI_10_FONT_ID, appId_, contentTop);
       renderer.drawCenteredText(UI_10_FONT_ID, footerY, tr(STR_APP_PRESS_BACK_TO_EXIT));
     }
   }

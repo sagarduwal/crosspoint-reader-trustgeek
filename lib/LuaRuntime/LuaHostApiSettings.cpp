@@ -4,7 +4,10 @@
 
 #include <ArduinoJson.h>
 #include <AppStorePaths.h>
+#include <CrossPointSettings.h>
 #include <HalStorage.h>
+
+#include <cstring>
 
 extern "C" {
 #include "lauxlib.h"
@@ -151,9 +154,32 @@ int settingsSet(lua_State* L) {
   return 1;
 }
 
+int settingsGlobalGet(lua_State* L) {
+  const char* key = luaL_checkstring(L, 1);
+  if (strcmp(key, "clock_utc_offset_q") == 0) {
+    lua_pushinteger(L, SETTINGS.clockUtcOffsetQ);
+    return 1;
+  }
+  if (strcmp(key, "clock_format") == 0) {
+    lua_pushinteger(L, SETTINGS.clockFormat);
+    return 1;
+  }
+  if (strcmp(key, "clock_synced") == 0) {
+    lua_pushboolean(L, SETTINGS.clockHasBeenSynced != 0 ? 1 : 0);
+    return 1;
+  }
+  if (lua_gettop(L) >= 2) {
+    lua_pushvalue(L, 2);
+    return 1;
+  }
+  lua_pushnil(L);
+  return 1;
+}
+
 const luaL_Reg kSettingsFunctions[] = {
     {"get", settingsGet},
     {"set", settingsSet},
+    {"global_get", settingsGlobalGet},
     {nullptr, nullptr},
 };
 

@@ -17,6 +17,62 @@ HalClock halClock;  // Singleton instance
 static uint8_t bcdToDec(uint8_t bcd) { return ((bcd >> 4) * 10) + (bcd & 0x0F); }
 static uint8_t decToBcd(uint8_t dec) { return ((dec / 10) << 4) | (dec % 10); }
 
+// Epoch threshold: Jan 2001 — rejects unset ESP32 system time after cold boot.
+static constexpr time_t kMinValidUnixTime = 978307200;
+
+static bool readRtcUtcHms(uint8_t& hour, uint8_t& minute, uint8_t& second) {
+  Wire.beginTransmission(I2C_ADDR_DS3231);
+  Wire.write(DS3231_SEC_REG);
+  if (Wire.endTransmission(false) != 0) {
+    return false;
+  }
+  Wire.requestFrom(I2C_ADDR_DS3231, (uint8_t)3);
+  if (Wire.available() < 3) {
+    return false;
+  }
+
+  const uint8_t rawSec = Wire.read();
+  const uint8_t rawMin = Wire.read();
+  const uint8_t rawHour = Wire.read();
+
+  second = bcdToDec(rawSec & 0x7F);
+  minute = bcdToDec(rawMin & 0x7F);
+  if (rawHour & 0x40) {
+    uint8_t h12 = bcdToDec(rawHour & 0x1F);
+    const bool pm = rawHour & 0x20;
+    if (h12 == 12) h12 = 0;
+    hour = pm ? static_cast<uint8_t>(h12 + 12) : h12;
+  } else {
+    hour = bcdToDec(rawHour & 0x3F);
+  }
+  return true;
+}
+
+static bool readSystemUtcHms(uint8_t& hour, uint8_t& minute, uint8_t& second) {
+  const time_t now = time(nullptr);
+  if (now < kMinValidUnixTime) {
+    return false;
+  }
+  struct tm timeinfo;
+  gmtime_r(&now, &timeinfo);
+  hour = static_cast<uint8_t>(timeinfo.tm_hour);
+  minute = static_cast<uint8_t>(timeinfo.tm_min);
+  second = static_cast<uint8_t>(timeinfo.tm_sec);
+  return true;
+}
+
+static bool waitForSntpSync() {
+  configTzTime("UTC0", "pool.ntp.org", "time.nist.gov");
+  constexpr int maxAttempts = 50;
+  for (int i = 0; i < maxAttempts; i++) {
+    if (sntp_get_sync_status() == SNTP_SYNC_STATUS_COMPLETED) {
+      return time(nullptr) >= kMinValidUnixTime;
+    }
+    delay(100);
+  }
+  return false;
+}
+
 void HalClock::begin() {
   if (!gpio.deviceIsX3()) {
     _available = false;
@@ -47,6 +103,20 @@ void HalClock::begin() {
   getTime(h, m);
 }
 
+bool HalClock::getUtcTime(uint8_t& hour, uint8_t& minute, uint8_t& second) const {
+  if (_available) {
+    return readRtcUtcHms(hour, minute, second);
+  }
+  return readSystemUtcHms(hour, minute, second);
+}
+
+bool HalClock::hasValidUtcTime() const {
+  uint8_t h = 0;
+  uint8_t m = 0;
+  uint8_t s = 0;
+  return getUtcTime(h, m, s);
+}
+
 bool HalClock::getTime(uint8_t& hour, uint8_t& minute) const {
   if (!_available) return false;
 
@@ -58,17 +128,8 @@ bool HalClock::getTime(uint8_t& hour, uint8_t& minute) const {
   }
 
   // Read 3 bytes starting at register 0x00: seconds, minutes, hours
-  Wire.beginTransmission(I2C_ADDR_DS3231);
-  Wire.write(DS3231_SEC_REG);
-  if (Wire.endTransmission(false) != 0) {
-    if (!_hasCachedTime) return false;
-    _lastPollMs = now;
-    hour = _cachedHour;
-    minute = _cachedMinute;
-    return true;
-  }
-  Wire.requestFrom(I2C_ADDR_DS3231, (uint8_t)3);
-  if (Wire.available() < 3) {
+  uint8_t second = 0;
+  if (!readRtcUtcHms(hour, minute, second)) {
     if (!_hasCachedTime) return false;
     _lastPollMs = now;
     hour = _cachedHour;
@@ -76,37 +137,22 @@ bool HalClock::getTime(uint8_t& hour, uint8_t& minute) const {
     return true;
   }
 
-  Wire.read();  // seconds — not needed
-  const uint8_t rawMin = Wire.read();
-  const uint8_t rawHour = Wire.read();
-
-  _cachedMinute = bcdToDec(rawMin & 0x7F);
-  // Handle 12/24h mode: bit 6 high = 12h mode
-  if (rawHour & 0x40) {
-    // 12h mode: bit 5 = PM, bits 4-0 = hours (1-12)
-    uint8_t h12 = bcdToDec(rawHour & 0x1F);
-    bool pm = rawHour & 0x20;
-    if (h12 == 12) h12 = 0;
-    _cachedHour = pm ? (h12 + 12) : h12;
-  } else {
-    // 24h mode: bits 5-0 = hours (0-23)
-    _cachedHour = bcdToDec(rawHour & 0x3F);
-  }
+  _cachedMinute = minute;
+  _cachedHour = hour;
   _lastPollMs = now;
   _hasCachedTime = true;
 
-  hour = _cachedHour;
-  minute = _cachedMinute;
   return true;
 }
 
 bool HalClock::formatTime(char* buf, size_t bufSize, uint8_t utcOffsetQuarterHoursBiased, bool use12Hour) const {
   if (bufSize < (use12Hour ? 9u : 6u)) return false;
-  uint8_t h, m;
-  if (!getTime(h, m)) return false;
+  uint8_t h = 0;
+  uint8_t m = 0;
+  uint8_t s = 0;
+  if (!getUtcTime(h, m, s)) return false;
 
   // Apply UTC offset: convert biased value to signed quarter-hours.
-  // Clamp against corrupted persisted values so display time can't drift outside [-12:00, +14:00].
   if (utcOffsetQuarterHoursBiased > 104) utcOffsetQuarterHoursBiased = 104;
   int offsetQuarterHours = static_cast<int>(utcOffsetQuarterHoursBiased) - 48;
   int totalMinutes = static_cast<int>(h) * 60 + static_cast<int>(m) + offsetQuarterHours * 15;
@@ -150,33 +196,29 @@ bool HalClock::writeTimeToRTC(uint8_t hour, uint8_t minute, uint8_t second) {
 }
 
 bool HalClock::syncFromNTP() {
-  if (!_available) return false;
-
   if (WiFi.status() != WL_CONNECTED) {
     LOG_ERR("CLK", "WiFi not connected, cannot sync NTP");
     return false;
   }
 
   LOG_INF("CLK", "Starting NTP sync...");
-  configTzTime("UTC0", "pool.ntp.org", "time.nist.gov");
-
-  // Wait for SNTP sync to complete (up to 5 seconds)
-  constexpr int maxAttempts = 50;
-  for (int i = 0; i < maxAttempts; i++) {
-    if (sntp_get_sync_status() == SNTP_SYNC_STATUS_COMPLETED) {
-      time_t now = time(nullptr);
-      struct tm timeinfo;
-      gmtime_r(&now, &timeinfo);
-
-      if (writeTimeToRTC(timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec)) {
-        LOG_INF("CLK", "RTC set to %02d:%02d:%02d UTC", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
-        return true;
-      }
-      return false;
-    }
-    delay(100);
+  if (!waitForSntpSync()) {
+    LOG_ERR("CLK", "NTP sync timed out");
+    return false;
   }
 
-  LOG_ERR("CLK", "NTP sync timed out");
-  return false;
+  if (_available) {
+    time_t now = time(nullptr);
+    struct tm timeinfo;
+    gmtime_r(&now, &timeinfo);
+    if (writeTimeToRTC(static_cast<uint8_t>(timeinfo.tm_hour), static_cast<uint8_t>(timeinfo.tm_min),
+                       static_cast<uint8_t>(timeinfo.tm_sec))) {
+      LOG_INF("CLK", "RTC set to %02d:%02d:%02d UTC", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+      return true;
+    }
+    return false;
+  }
+
+  LOG_INF("CLK", "System time synced from NTP (no hardware RTC)");
+  return true;
 }
